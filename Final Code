@@ -1,0 +1,141 @@
+import numpy as np
+import scipy.signal as spsignal
+from scipy.sparse import csr_matrix, random
+import time
+
+start_time = time.time()
+"""Creating sparse matrix with a density of 50%"""
+sparse_matrix = random(5, 5, density=1.00, format='csr', dtype=np.int8)
+sparse_matrix.data = np.abs(sparse_matrix.data)
+
+Kernel = np.array([[-1, -2, -3],
+                   [-4, -5, -6],
+                   [-7, -8, -9]])
+
+print("\nThe Sparse Matrix is:")
+print(sparse_matrix.A)
+
+"""Pad the sparse matrix on all sides"""
+sparse_matrix = np.pad(sparse_matrix.A, 1, mode='constant')
+
+
+# TODO: add the help messge and usage example
+class ProcessorElement:
+    """" The Processor Element performs the mathematical operation
+         sum = val*coeff + self.sum where val is the weights of the sparse matrix, coeff
+         is the kernel values and self.sum in the sum from the previous iteration. When the counter hits
+         9 the function returns the total output summation, kernel value and the weighted value"""
+    def __init__(self):
+        self.sum = 0
+        self.counter = 0
+        self.outReady = 0
+
+    def processor(self, val, coeff):
+        self.outReady = 0
+        self.sum = val * coeff + self.sum
+        self.counter = self.counter + 1
+        outval = 0
+
+        if self.counter == 9:
+            self.outReady = 1
+            self.counter = 0
+            outval = self.sum
+            self.sum = 0
+
+        return outval, coeff, val, self.outReady
+def init_inputArray(line_number, matrix, kernel):
+    """ Function to initialize the first row that goes into the systolic array element"""
+    matrix_height, matrix_width = matrix.shape
+    submatrix_height, submatrix_width = kernel.shape
+
+    if matrix_height < submatrix_height or matrix_width < submatrix_width:
+        raise ValueError(" Invalid submatrix size")
+
+    img2col_result = []
+
+    i = line_number
+    j = 0
+    submatrix = matrix[i:i + submatrix_height, j:j + submatrix_width]
+    img2col_result.append(submatrix.flatten())
+
+    return np.array(img2col_result)
+def kernel_to_column(kernel):
+    """"This function turns the 2D kernel into a 1D array to feed into the systolic array"""
+    column = [element for row in kernel for element in row]
+    return column
+def compute_line(line_number, column, kernel_height, matrix_width, kernel_width):
+    """The compute_line function performs the convolution operation on the sparse matrix
+        using the systolic array architecture updating the pointers abd counters as it
+        processors each element in a row. The output is collected in the 'out' list, and
+        returns the result when the convolution process is complete for that row"""
+    ae = ProcessorElement()
+    colum_feed_array = [0, 0, 0]
+    colum_feed_array = sparse_matrix[line_number:line_number + kernel_height, column].tolist()
+    counter1 = 0
+    counter2 = 0
+    array_read_prt = 0
+    column_feed_ptr = 0
+    coeff_read_ptr = 0
+    out = []
+    column = column + 1
+
+    while True:
+        s, c, v, Or = ae.processor(first_row[0, array_read_prt], final_kernel[coeff_read_ptr])
+
+        if (counter2 == 3) or (counter2 == 6):
+            first_row[0, array_read_prt] = colum_feed_array[column_feed_ptr]
+            column_feed_ptr = column_feed_ptr + 1
+
+        counter1 = counter1 + 1
+        counter2 = counter2 + 1
+        coeff_read_ptr = coeff_read_ptr + 1
+        if coeff_read_ptr == 9:
+            coeff_read_ptr = 0
+
+        array_read_prt = array_read_prt + 1
+        if array_read_prt == 9:
+            array_read_prt = 0
+
+        if counter1 == 3:
+            counter1 = 0
+
+        if counter2 == 9:
+            first_row[0, array_read_prt] = colum_feed_array[column_feed_ptr]
+            column_feed_ptr = 0
+            ## to remove this if: add more padding to the width dimension of the matrix
+            if column < matrix_width:
+                colum_feed_array = sparse_matrix[line_number:line_number + kernel_height, column]
+                column = column + 1
+
+            # print("out ready = ", Or)
+            counter2 = 0
+            coeff_read_ptr = 0
+            array_read_prt = array_read_prt + 1
+            if array_read_prt == 9:
+                array_read_prt = 0
+
+            out.append(s)
+            if len(out) == matrix_width - kernel_width + 1:
+                return out
+
+
+### main code starts here
+first_row = init_inputArray(0, sparse_matrix, Kernel)
+flipped_kernel = np.flipud(np.fliplr(Kernel))
+final_kernel = kernel_to_column(flipped_kernel)
+print("\nThe Coefficiet Values are:")
+print(final_kernel)
+
+i_matrix_height, i_matrix_width = sparse_matrix.shape
+i_kernel_height, i_kernel_width = Kernel.shape
+i_column = 3
+i_line_number = 0
+
+for i_line_number in range(5):
+    first_row = init_inputArray(i_line_number, sparse_matrix, Kernel)
+    result = compute_line(i_line_number, i_column, i_kernel_height, i_matrix_width, i_kernel_width)
+    result = np.array([result])
+    print("\nThe final output is ")
+    print(result)
+
+print("time elapsed:{: .7f}s".format(time.time() - start_time))
