@@ -5,7 +5,7 @@ import time
 
 start_time = time.time()
 """Creating sparse matrix with a density of 50%"""
-sparse_matrix = random(5, 5, density=1.00, format='csr', dtype=np.int8)
+sparse_matrix = random(128, 128, density=75.00, format='csr', dtype=np.int8)
 sparse_matrix.data = np.abs(sparse_matrix.data)
 
 Kernel = np.array([[-1, -2, -3],
