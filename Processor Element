@@ -1,0 +1,20 @@
+module PE(
+    input [7:0] a, b, c,
+    input clk,
+    output reg [7:0] a1, b1,
+    output wire [15:0] out
+);
+
+reg [15:0] mul;
+wire [15:0] out_temp;
+
+assign out_temp = c + mul;
+assign out = out_temp;
+
+always @(posedge clk) begin
+    mul = a * b;
+    a1 <= a;
+    b1 <= b;
+end
+
+endmodule
