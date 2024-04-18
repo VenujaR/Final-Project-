@@ -1,0 +1,149 @@
+module systolic_array(
+    input clk,
+    input [7:0] flg,
+    input [26:0] array1,
+    input [26:0] array2,
+    output reg [7:0] dout
+);
+
+parameter N=7;
+parameter n=3;
+parameter ord = 2*n-1;
+
+reg [N:0] A [0:ord-1][0:ord-1];
+reg [N:0] B [0:ord-1][0:ord-1];
+reg [N:0] C [0:ord][0:ord];
+
+wire [N:0] A1 [ord:0][ord:0];
+wire [N:0] B1 [ord:0][ord:0];
+wire [N:0] C1 [ord:0][ord:0];
+
+function automatic integer twos(input [N:0] inp);
+    twos = inp;
+endfunction
+
+function automatic [N:0] slicie(input [((N+1)*(n))-1:0] inp, input integer b);
+    for (integer i = 0; i <= N; i = i + 1) begin
+        slicie[i] = inp[b*(N+1) + i];
+    end
+endfunction
+
+genvar i, j;
+generate
+    for (i=0; i< ord; i= i+1) begin
+        for (j=0; j<ord; j=j+1) begin
+            if (i < n-1) begin
+                if (j < ord -n+1) begin
+                    PE x0(
+                        .clk(clk),
+                        .a(A[i][j]),
+                        .b(B[i][j]),
+                        .c(C[i][j]),
+                        .a1(A1[i][j+1]),
+                        .b1(B1[i+1][j]),
+                        .out(C1[i+1][j+1])
+                    );
+                end
+                else begin
+                    DE y0(
+                        .clk(clk),
+                        .a(A[i][j]),
+                        .b(B[i][j]),
+                        .a1(A1[i][j+1]),
+                        .b1(B1[i+1][j])
+                    );
+                end
+            end
+            else if (i == n - 1) begin
+                PE x(
+                    .clk(clk),
+                    .a(A[i][j]),
+                    .b(B[i][j]),
+                    .c(C[i][j]),
+                    .a1(A1[i][j+1]),
+                    .b1(B1[i+1][j]),
+                    .out(C1[i+1][j+1])
+                );
+            end
+            else if (i > n - 1) begin
+                if (j <= i - n) begin
+                    DE y1(
+                        .clk(clk),
+                        .a(A[i][j]),
+                        .b(B[i][j]),
+                        .a1(A1[i][j+1]),
+                        .b1(B1[i+1][j])
+                    );
+                end
+                else begin
+                    PE x(
+                        .clk(clk),
+                        .a(A[i][j]),
+                        .b(B[i][j]),
+                        .c(C[i][j]),
+                        .a1(A1[i][j+1]),
+                        .b1(B1[i+1][j]),
+                        .out(C1[i+1][j+1])
+                    );
+                end
+            end
+        end
+    end
+endgenerate
+
+integer i1, j1;
+
+always @(posedge clk) begin
+    if (flg < n-1) begin
+        if (flg == 0) begin
+            for (i1 = 0; i1 <= ord; i1 = i1 + 1) begin
+                C[0][i1] <= 0;
+                C[i1][0] <= 0;
+            end
+            for (i1 = 0; i1 < ord; i1 = i1 + 1) begin
+                A[i1][0] <= 0;
+                B[0][i1] <= 0;
+            end
+        end
+        for (i1 = 0; i1 < ord; i1 = i1 + 1) begin
+            A[i1][0] <= 0;
+            B[0][i1] <= 0;
+        end
+        for (i1 = 0; i1 < n; i1 = i1 + 1) begin
+            A[i1 + flg][0] <= slicie(array1, i1 * (N + 1));
+        end
+        for (i1 = 0; i1 < n; i1 = i1 + 1) begin
+            B[0][i1 + flg] <= slicie(array2, i1 * (N + 1));
+        end
+    end
+    else begin
+        for (i1 = 0; i1 <= n; i1 = i1 + 1) begin
+            C[0][i1] <= 0;
+            C[i1][0] <= 0;
+            A[i1][0] <= 0;
+            B[0][i1] <= 0;
+        end
+    end
+
+    for (i1 = 0; i1 < ord; i1 = i1 + 1) begin
+        for (j1 = 1; j1 <= ord; j1 = j1 + 1) begin
+            A[i1][j1] <= A1[i1][j1];
+        end
+    end
+
+    for (i1 = 1; i1 <= ord; i1 = i1 + 1) begin
+        for (j1 = 0; j1 < ord; j1 = j1 + 1) begin
+            B[i1][j1] <= B1[i1][j1];
+        end
+    end
+
+    for (i1 = 1; i1 <= ord; i1 = i1 + 1) begin
+        for (j1 = 1; j1 <= ord; j1 = j1 + 1) begin
+            C[i1][j1] <= C1[i1][j1];
+        end
+    end
+
+    dout <= C1[ord][ord];
+end
+
+endmodule
