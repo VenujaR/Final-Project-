@@ -1,0 +1,62 @@
+module conv_tb;
+
+// Parameters
+parameter N = 8;
+parameter n = 3;
+parameter img1 = 128;
+parameter img = 128;
+parameter dt = 8;
+parameter sparsity = 25; // Sparsity percentage (25% = 1 out of 4 elements is non-zero)
+
+// Inputs
+reg clk;
+reg [6:0] flg;
+reg [(128*128*8)-1:0] inp_matrix;
+
+// Instantiate the Unit Under Test (UUT)
+conv uut (
+    .clk(clk),
+    .flg(flg),
+    .inp_matrix(inp_matrix)
+);
+
+// Clock generation
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
+
+// Input data generation
+initial begin
+    // Initialize input matrix as a sparse matrix with 25% sparsity
+    for (integer i = 0; i < (128*128); i = i + 1) begin
+        if ($urandom_range(0, 99) < sparsity)
+            inp_matrix[i*8 +: 8] = $random; // Non-zero value
+        else
+            inp_matrix[i*8 +: 8] = 0; // Zero value
+    end
+
+    // Apply input signals
+    flg = 0;
+    #10;
+
+    // Simulate the module
+    for (integer i = 0; i < 3*n; i = i + 1) begin
+        flg = i;
+        #10;
+    end
+
+    // Wait for the module to finish processing
+    while (flg != 0) begin
+        #10;
+    end
+
+    // Check the output (replace with your own verification logic)
+    $display("Output data:");
+    for (integer i = 0; i < (img-(n-1))*(img-(n-1)); i = i + 1)
+        $display("%d: %h", i, uut.Aout[i]);
+
+    $finish;
+end
+
+endmodule
