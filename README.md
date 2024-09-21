@@ -1,5 +1,6 @@
 # Final Year Project-
-Advanced sparsely supported hardware matrix multiplication 
+Advanced sparsely supported hardware matrix multiplication-
+
 This project focuses on optimizing matrix multiplication operations by leveraging sparsity in matrices and specialized hardware support. Matrix multiplication is a fundamental operation in many fields, including machine learning, scientific computing, and graphics. However, traditional matrix multiplication can be inefficient, especially when dealing with sparse matrices — matrices where a large number of elements are zero.
 
 Key Highlights:
